@@ -1,5 +1,6 @@
 use std::{
     alloc::{self, Layout},
+    error::Error,
     fmt::{self, Display},
     mem::forget,
     ptr::{NonNull, copy_nonoverlapping},
@@ -22,6 +23,7 @@ impl Drop for AnyImageBuffer {
 }
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum PngDecodeError {
     ZunePngError(zune_png::error::PngDecodeErrors),
     ZeroWidthOrHeight,
@@ -40,9 +42,9 @@ impl From<zune_png::error::PngDecodeErrors> for PngDecodeError {
 impl Display for PngDecodeError {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            PngDecodeError::ZunePngError(error) => Display::fmt(error, formatter),
-            PngDecodeError::ZeroWidthOrHeight => write!(formatter, "width or height is zero"),
-            PngDecodeError::UnsupportedPngColorspace(colorspace) => {
+            Self::ZunePngError(error) => Display::fmt(error, formatter),
+            Self::ZeroWidthOrHeight => write!(formatter, "width or height is zero"),
+            Self::UnsupportedPngColorspace(colorspace) => {
                 use zune_png::zune_core::colorspace::ColorSpace;
                 let colorspace = fmt::from_fn(|f| match colorspace {
                     ColorSpace::RGB => write!(f, "RGB"),
@@ -63,13 +65,61 @@ impl Display for PngDecodeError {
                 });
                 write!(formatter, "unsupported PNG colorspace: {colorspace}")
             }
-            PngDecodeError::UnknownBitdepth => write!(formatter, "unknown bitdepth"),
-            PngDecodeError::WidthTooLarge(u) => {
+            Self::UnknownBitdepth => write!(formatter, "unknown bitdepth"),
+            Self::WidthTooLarge(u) => {
                 write!(formatter, "width ({u}) is too large to fit into u32")
             }
-            PngDecodeError::HeightTooLarge(u) => {
+            Self::HeightTooLarge(u) => {
                 write!(formatter, "height ({u}) is too large to fit into u32")
             }
+        }
+    }
+}
+
+impl Error for PngDecodeError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::ZunePngError(error) => Some(error),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum QoiDecodeError {
+    QoiError(qoi::Error),
+    ZeroWidthOrHeight,
+    WidthTooLarge(usize),
+    HeightTooLarge(usize),
+}
+
+impl From<qoi::Error> for QoiDecodeError {
+    fn from(v: qoi::Error) -> Self {
+        Self::QoiError(v)
+    }
+}
+
+impl Display for QoiDecodeError {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::QoiError(error) => Display::fmt(error, formatter),
+            Self::ZeroWidthOrHeight => write!(formatter, "width or height is zero"),
+            Self::WidthTooLarge(u) => {
+                write!(formatter, "width ({u}) is too large to fit into u32")
+            }
+            Self::HeightTooLarge(u) => {
+                write!(formatter, "height ({u}) is too large to fit into u32")
+            }
+        }
+    }
+}
+
+impl Error for QoiDecodeError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            QoiDecodeError::QoiError(error) => Some(error),
+            _ => None,
         }
     }
 }
@@ -227,6 +277,25 @@ impl AnyImageBuffer {
             width,
             height,
             data: NonNull::new(data).unwrap(),
+            format,
+        })
+    }
+
+    pub fn decode_from_qoi(content: &[u8]) -> Result<Self, QoiDecodeError> {
+        let mut decoder = qoi::Decoder::new(content)?;
+        let data = decoder.decode_to_vec()?;
+        let header = decoder.header();
+        if header.width == 0 || header.height == 0 {
+            return Err(QoiDecodeError::ZeroWidthOrHeight);
+        }
+        let format = match header.channels {
+            qoi::Channels::Rgb => PixelFormat::Rgb8U,
+            qoi::Channels::Rgba => PixelFormat::Rgba8U,
+        };
+        Ok(Self {
+            width: header.width,
+            height: header.height,
+            data: NonNull::new(data.into_raw_parts().0).unwrap(),
             format,
         })
     }

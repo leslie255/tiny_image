@@ -40,7 +40,7 @@ fn main() {
 
     match fs::read("foo/image.png") {
         Ok(data) => {
-            let decoded_image = AnyImageBuffer::decode_from_png(&data).unwrap();
+            let decoded_image = AnyImageBuffer::decode_from_qoi(&data).unwrap();
             dbg!(decoded_image.format());
             let image_rgba8 = decoded_image
                 .into_format_lossy::<Rgba32F>()
