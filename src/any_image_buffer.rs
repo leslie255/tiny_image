@@ -187,7 +187,11 @@ impl AnyImageBuffer {
     }
 
     pub fn into_vec(self) -> Vec<u8> {
-        unsafe { Vec::from_raw_parts(self.as_bytes_ptr(), self.bytes_count(), self.bytes_count()) }
+        let vec = unsafe {
+            Vec::from_raw_parts(self.as_bytes_ptr(), self.bytes_count(), self.bytes_count())
+        };
+        forget(self);
+        vec
     }
 
     pub fn width(&self) -> u32 {

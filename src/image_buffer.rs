@@ -2,6 +2,7 @@ use std::{
     alloc::{self, Layout},
     fmt::Debug,
     io,
+    mem::forget,
     mem::{transmute, transmute_copy},
     ptr::copy_nonoverlapping,
     slice,
@@ -223,34 +224,40 @@ impl<PF: PixelFormatTrait> ImageBuffer<PF> {
         unsafe { slice::from_raw_parts_mut(self.raw.as_pixels_ptr(), self.raw.pixels_count()) }
     }
 
-    pub fn into_bytes_vec(&self) -> Vec<u8> {
-        unsafe {
+    pub fn into_bytes_vec(self) -> Vec<u8> {
+        let vec = unsafe {
             Vec::from_raw_parts(
                 self.raw.as_bytes_ptr(),
                 self.raw.bytes_count(),
                 self.raw.bytes_count(),
             )
-        }
+        };
+        forget(self);
+        vec
     }
 
-    pub fn into_primitives_vec(&self) -> Vec<PF::Primitive> {
-        unsafe {
+    pub fn into_primitives_vec(self) -> Vec<PF::Primitive> {
+        let vec = unsafe {
             Vec::from_raw_parts(
                 self.raw.as_primitives_ptr(),
                 self.raw.primitives_count(),
                 self.raw.primitives_count(),
             )
-        }
+        };
+        forget(self);
+        vec
     }
 
-    pub fn into_pixels_vec(&self) -> Vec<PF::PrimitiveArray> {
-        unsafe {
+    pub fn into_pixels_vec(self) -> Vec<PF::PrimitiveArray> {
+        let vec = unsafe {
             Vec::from_raw_parts(
                 self.raw.as_pixels_ptr(),
                 self.raw.pixels_count(),
                 self.raw.pixels_count(),
             )
-        }
+        };
+        forget(self);
+        vec
     }
 
     fn alloc(width: u32, height: u32, zeroed: bool) -> ImagePtr<PF> {
