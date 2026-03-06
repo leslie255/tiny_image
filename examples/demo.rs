@@ -38,25 +38,19 @@ fn main() {
     image.print_with_kitty_graphics().unwrap();
     println!();
 
-    match fs::read("foo/image.png") {
-        Ok(data) => {
-            let decoded_image = AnyImageBuffer::decode_from_qoi(&data).unwrap();
-            dbg!(decoded_image.format());
-            let image_rgba8 = decoded_image
-                .into_format_lossy::<Rgba32F>()
-                .into_format_lossy::<Luma8U>()
-                .into_format_lossy::<Rgba8U>();
-            println!("Image grayscaled:");
-            image_rgba8.print_with_kitty_graphics().unwrap();
-            println!();
+    let decoded_image = tiny_image::open("foo/image.png").unwrap_or_else(|error| {
+        panic!("cannot open foo/image.png: {error}");
+    });
 
-            out_buffer.clear();
-            image_rgba8.encode_png(&mut out_buffer);
-            fs::write("foo/image_reencoded.png", &out_buffer).unwrap();
-        }
-        Err(error) => {
-            println!("Cannot read foo/image.png: {error}");
-        }
-    }
+    let grayscaled_image = decoded_image
+        .into_format_lossy::<Rgba32F>()
+        .into_format_lossy::<Luma8U>()
+        .into_format_lossy::<Rgba8U>();
+    println!("Image grayscaled:");
+    grayscaled_image.print_with_kitty_graphics().unwrap();
+    println!();
+
+    out_buffer.clear();
+    grayscaled_image.encode_png(&mut out_buffer);
+    fs::write("foo/image_reencoded.png", &out_buffer).unwrap();
 }
-

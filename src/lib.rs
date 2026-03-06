@@ -27,6 +27,7 @@
 //! they can be `transmute`'d to/from each other for those who desire to do so.
 
 mod any_image_buffer;
+mod convenience;
 mod image_buffer;
 mod image_mut;
 mod image_ptr;
@@ -34,6 +35,7 @@ mod image_ref;
 mod pixel_format;
 
 pub use any_image_buffer::*;
+pub use convenience::*;
 pub use image_buffer::*;
 pub use image_mut::*;
 pub use image_ptr::*;
