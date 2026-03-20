@@ -1,3 +1,17 @@
+/// Convenience module for batch-importing all pixel format marker types:
+///
+/// ```
+/// use tiny_image::pixel_formats::*;
+/// ```
+pub mod pixel_formats {
+    pub use super::Rgb8U;
+    pub use super::Rgba8U;
+    pub use super::Luma8U;
+    pub use super::Rgb32F;
+    pub use super::Rgba32F;
+    pub use super::Luma32F;
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PixelFormat {
     Rgb8U,
